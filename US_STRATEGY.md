@@ -2,21 +2,32 @@
 
 ## Universe
 
-- 미국 NASDAQ / NYSE / AMEX
-- 보통주만 포함
-- ETF / ETN / ETP 제외
-- ADR/DR 제외
-- 금융주 제외
+KIS 해외주식 조건검색 API로 서버사이드 필터링 후, 추가 조건은 코드에서 처리한다.
 
-## 필터
+```
+KIS 조건검색 API (inquire-search)
+  조건: Price >= $5, Market Cap >= $500M
+    ↓
+보통주 필터 (코드) — ETF/ETN/ADR/Warrant/Preferred 등 제외
+    ↓
+금융주 제외 (코드)
+    ↓
+유동성 필터 (코드) — 20일 평균 거래대금 >= $5M/day
+    ↓
+Ranking
+```
 
-| 조건 | 기준 |
-|---|---|
-| Price | >= $5 |
-| Market Cap | >= $500M |
-| Liquidity | >= $5M/day (20일 평균) |
-| EBITDA TTM | > 0 |
-| EV/EBITDA | > 0 |
+## 필터 상세
+
+| 조건 | 처리 위치 | 기준 |
+|---|---|---|
+| Price | KIS API | >= $5 |
+| Market Cap | KIS API | >= $500M |
+| 보통주 | 코드 | ETF/ETN/ETP/ADR/DR/Warrant/Preferred 이름 패턴 제외 |
+| 금융주 | 코드 | Financial 섹터 제외 |
+| Liquidity | 코드 | >= $5M/day (20일 평균) |
+| EBITDA TTM | 코드 (랭킹 단계) | > 0 |
+| EV/EBITDA | 코드 (랭킹 단계) | > 0 |
 
 ## Enterprise Value 계산
 

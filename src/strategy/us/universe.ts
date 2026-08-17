@@ -2,6 +2,7 @@ import type { AxiosInstance } from "axios";
 import type { UsStock } from "./types.js";
 import { searchOverseasStocks, type KisSearchCondition } from "../../kis/overseas/stock.js";
 import { US_STRATEGY } from "./config.js";
+import { filterNonCommonStock, filterFinancials } from "./filters.js";
 
 function buildCondition(exchange: string): KisSearchCondition {
   return {
@@ -26,13 +27,7 @@ export async function buildUsUniverse(client: AxiosInstance): Promise<UsStock[]>
     ),
   );
 
-  const merged = results.flat();
-  console.log(`[Universe] KIS 조건검색 후보: ${merged.length}`);
-
-  // TODO: KIS Master JOIN으로 보통주/DR/ETF 필터
-  // TODO: 유동성 필터 (20일 평균 거래대금)
-
-  const stocks: UsStock[] = merged.map((item) => ({
+  let stocks: UsStock[] = results.flat().map((item) => ({
     code: item.symbol,
     name: item.name,
     marketCap: item.marketCap,
@@ -41,8 +36,17 @@ export async function buildUsUniverse(client: AxiosInstance): Promise<UsStock[]>
     price: item.price,
     dollarVolume: 0,
   }));
+  console.log(`[Universe] KIS 조건검색 결과: ${stocks.length}`);
 
-  console.log(`[Universe] 필터 후: ${stocks.length}`);
+  stocks = filterNonCommonStock(stocks);
+  console.log(`[Universe] 보통주 필터 후: ${stocks.length}`);
+
+  stocks = filterFinancials(stocks);
+  console.log(`[Universe] 금융주 제외 후: ${stocks.length}`);
+
+  // TODO: dollarVolume이 실제로 채워진 후 활성화
+  // stocks = filterByLiquidity(stocks);
+  // console.log(`[Universe] 유동성 필터 후: ${stocks.length}`);
 
   return stocks;
 }

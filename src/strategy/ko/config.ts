@@ -17,6 +17,9 @@ export const KO_STRATEGY = {
     momentum: 0.1,
   },
 
-  MIN_TRADING_VALUE: 500_000_000,
+  // HTS 조건검색식 seq 번호 (eFriend Expert에서 생성 후 설정)
+  // 조건식 내용: 스팩/리츠/ETF/ETN/우선주 제외, 20일 평균 거래대금 >= 5억원
+  CONDITION_SEQ: process.env.KIS_KO_CONDITION_SEQ ?? "",
+
   MARKET_CAP_BOTTOM_PERCENTILE: 0.2,
 } as const;

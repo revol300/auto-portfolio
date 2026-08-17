@@ -23,6 +23,20 @@
 3. APP KEY / APP SECRET 발급
 4. 계좌번호 확인 (한국주식용, 미국주식용 각각)
 
+### HTS 조건검색식 (한국주식 전략 사용 시)
+
+한국주식 유니버스는 HTS 조건검색식으로 서버사이드 필터링한다. 사전에 eFriend Expert에서 조건식을 만들어야 한다.
+
+1. **eFriend Expert**(HTS) 실행
+2. 조건검색 메뉴 진입
+3. 아래 조건 설정:
+   - 종목유형 제외: 스팩, 리츠, ETF, ETN, 우선주
+   - 20일 평균 거래대금 >= 5억원
+4. 조건식 저장 → **seq 번호** 확인
+5. `.env`에 `KIS_KO_CONDITION_SEQ=<seq번호>` 입력
+
+seq 번호는 `fetchConditionList()` API로도 조회할 수 있다.
+
 ### DART OpenAPI (한국주식 전략 사용 시)
 
 1. [OpenDART](https://opendart.fss.or.kr/) 접속

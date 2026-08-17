@@ -2,7 +2,7 @@ import type { AxiosInstance } from "axios";
 import type { UsStock } from "./types.js";
 import { searchOverseasStocks, type KisSearchCondition } from "../../kis/overseas/stock.js";
 import { US_STRATEGY } from "./config.js";
-import { filterNonCommonStock, filterFinancials } from "./filters.js";
+import { filterNonCommonStock, filterFinancials, filterByLiquidity } from "./filters.js";
 
 function buildCondition(exchange: string): KisSearchCondition {
   return {
@@ -34,7 +34,7 @@ export async function buildUsUniverse(client: AxiosInstance): Promise<UsStock[]>
     exchange: item.exchange,
     sector: "",
     price: item.price,
-    dollarVolume: 0,
+    dollarVolume: item.price * item.volume,
   }));
   console.log(`[Universe] KIS 조건검색 결과: ${stocks.length}`);
 
@@ -44,9 +44,8 @@ export async function buildUsUniverse(client: AxiosInstance): Promise<UsStock[]>
   stocks = filterFinancials(stocks);
   console.log(`[Universe] 금융주 제외 후: ${stocks.length}`);
 
-  // TODO: dollarVolume이 실제로 채워진 후 활성화
-  // stocks = filterByLiquidity(stocks);
-  // console.log(`[Universe] 유동성 필터 후: ${stocks.length}`);
+  stocks = filterByLiquidity(stocks);
+  console.log(`[Universe] 유동성 필터 후: ${stocks.length}`);
 
   return stocks;
 }

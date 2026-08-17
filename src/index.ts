@@ -1,113 +1,104 @@
 import "dotenv/config";
+import fs from "node:fs";
+import path from "node:path";
 import { Command } from "commander";
 import { createKisClient } from "./kis/client.js";
-import { fetchAccountBalance } from "./kis/account.js";
-import { buildUniverse } from "./universe/buildUniverse.js";
-import { fetchBulkDartFundamentals } from "./dart/finance.js";
-import { fetchBulkPrices } from "./kis/price.js";
-import { calculateFactorScores } from "./factors/finalScore.js";
-import { buildTargetPortfolio } from "./portfolio/buildPortfolio.js";
+import { createStrategy } from "./strategy/factory.js";
+import type { MarketId } from "./strategy/types.js";
 import { calculateTargetQuantities } from "./portfolio/positionSizing.js";
 import { createRebalancePlan } from "./portfolio/rebalance.js";
-import { isRebalanceMonth, isLastTradingDay, getQuarterLabel } from "./scheduler/tradingDay.js";
-import { alreadyRebalanced } from "./scheduler/duplicateGuard.js";
-import { initializeDatabase } from "./storage/database.js";
-import { saveRebalanceRun, saveFactorScores, saveFundamentalSnapshots } from "./storage/repository.js";
 import { printReport, saveReport } from "./report/report.js";
-import { executeOrders } from "./kis/order.js";
 
 const program = new Command();
 
 program
-  .name("ko-rebalance")
-  .description("한국주식 멀티팩터 ISA 분기 리밸런싱")
-  .version("0.1.0");
+  .name("auto-portfolio")
+  .description("한국/미국 주식 분기 리밸런싱 Batch 프로그램")
+  .version("0.2.0");
 
 program
   .command("rebalance")
   .description("리밸런싱 실행")
+  .requiredOption("--market <market>", "시장 선택 (ko | us)")
   .option("--execute", "실제 주문 실행 (기본값: dry-run)")
   .option("--dry-run", "dry-run 모드 (기본값)")
-  .option("--force", "날짜/중복 검사 무시")
+  .option("--force", "주말/중복 검사 무시")
   .action(async (options) => {
+    const marketId = options.market as MarketId;
+    if (marketId !== "ko" && marketId !== "us") {
+      console.error(`[Error] --market 옵션은 ko 또는 us만 가능합니다. (입력: ${options.market})`);
+      process.exit(1);
+    }
+
     const dryRun = !options.execute;
     const force = !!options.force;
 
-    console.log(`[Mode] ${dryRun ? "DRY-RUN" : "EXECUTE"}`);
+    console.log(`[Mode] ${dryRun ? "DRY-RUN" : "EXECUTE"} | Market: ${marketId.toUpperCase()}`);
 
-    try {
-      await initializeDatabase();
+    const today = new Date();
+    const quarter = `${today.getFullYear()}-Q${Math.ceil((today.getMonth() + 1) / 3)}`;
 
-      const today = new Date();
-      const quarter = getQuarterLabel(today);
+    if (!force) {
+      const day = today.getDay();
+      if (day === 0 || day === 6) {
+        console.log("[Skip] 주말은 거래일이 아닙니다.");
+        return;
+      }
 
-      if (!force) {
-        if (!isRebalanceMonth(today)) {
-          console.log(`[Skip] ${today.getMonth() + 1}월은 리밸런싱 월이 아닙니다.`);
-          return;
-        }
-
-        if (!(await isLastTradingDay(today))) {
-          console.log("[Skip] 마지막 거래일이 아닙니다.");
-          return;
-        }
-
-        if (await alreadyRebalanced(quarter)) {
-          console.log(`[Skip] ${quarter} 리밸런싱이 이미 완료되었습니다.`);
+      const outputDir = path.join("output", marketId, quarter);
+      if (fs.existsSync(outputDir)) {
+        const files = fs.readdirSync(outputDir).filter((f) => /^\d{8}\.json$/.test(f));
+        const todayMs = today.getTime();
+        const hasDuplicate = files.some((f) => {
+          const y = +f.slice(0, 4);
+          const m = +f.slice(4, 6) - 1;
+          const d = +f.slice(6, 8);
+          const fileDate = new Date(y, m, d);
+          return Math.abs(todayMs - fileDate.getTime()) < 7 * 24 * 60 * 60 * 1000;
+        });
+        if (hasDuplicate) {
+          console.log("[Skip] 7일 이내 실행 기록이 존재합니다. (--force 로 무시 가능)");
           return;
         }
       }
+    }
 
-      console.log(`[Start] ${quarter} 리밸런싱 시작`);
-
+    try {
       const client = await createKisClient();
-      const account = await fetchAccountBalance(client);
-      console.log(`[Account] 총 자산: ${account.totalAssets.toLocaleString()}원`);
+      const strategy = createStrategy(marketId, client);
+      const config = strategy.config;
 
-      const universe = await buildUniverse(client);
-      const codes = universe.map((s) => s.code);
-      const names = new Map(universe.map((s) => [s.code, s.name]));
+      console.log(`[Start] ${quarter} 리밸런싱 시작 (${marketId.toUpperCase()})`);
 
-      console.log("[Data] 가격 데이터 조회 중...");
-      const prices = await fetchBulkPrices(client, codes);
+      const account = await strategy.fetchAccountBalance();
+      console.log(`[Account] 총 자산: ${account.totalAssets.toLocaleString()}`);
 
-      const priceMap = new Map(prices.map((p) => [p.code, p]));
+      const universe = await strategy.buildUniverse();
+      const scoringData = await strategy.fetchScoringData(universe);
+      const ranked = strategy.rankStocks(scoringData);
 
-      console.log(`[Data] 재무 데이터 조회 중 (DART)... (${codes.length}종목)`);
-      const dartStocks = universe.map((s) => ({
-        code: s.code,
-        currentPrice: priceMap.get(s.code)?.currentPrice ?? 0,
-        sharesOutstanding: Math.floor(s.marketCap / (priceMap.get(s.code)?.currentPrice || 1)),
-      }));
-      const fundamentals = await fetchBulkDartFundamentals(dartStocks);
+      const targetPortfolio = strategy.buildTargetPortfolio(
+        ranked,
+        account.positions,
+        account.totalAssets,
+      );
 
-      console.log("[Factor] 팩터 스코어 계산 중...");
-      const scores = calculateFactorScores({ fundamentals, prices, names });
-
-      const targetPortfolio = buildTargetPortfolio({
-        scores,
-        currentPositions: account.positions,
-        totalAssets: account.totalAssets,
-      });
-
+      const prices = await strategy.fetchPrices(targetPortfolio.map((t) => t.code));
       const sized = calculateTargetQuantities(targetPortfolio, prices);
 
       const plan = createRebalancePlan({
         account,
         targetPortfolio: sized,
         quarter,
+        config,
       });
 
       printReport(plan);
-      saveReport(plan, scores);
-
-      await saveRebalanceRun(plan);
-      await saveFactorScores(plan.runId, scores);
-      await saveFundamentalSnapshots(plan.runId, fundamentals);
+      saveReport(plan, ranked);
 
       if (!dryRun) {
         console.log("[Execute] 주문 실행 중...");
-        await executeOrders(client, plan.actions);
+        await strategy.executeOrders(plan.actions);
         console.log("[Execute] 주문 완료");
       }
 

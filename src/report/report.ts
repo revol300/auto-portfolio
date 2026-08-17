@@ -1,14 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { RebalancePlan, FactorScores } from "../types.js";
+import type { RebalancePlan } from "../types.js";
+import type { RankedStock } from "../strategy/types.js";
 
 export function printReport(plan: RebalancePlan): void {
   console.log("\n========================================");
-  console.log(`  리밸런싱 결과 — ${plan.quarter}`);
+  console.log(`  리밸런싱 결과 — ${plan.quarter} [${plan.marketId.toUpperCase()}]`);
   console.log("========================================");
-  console.log(`  총 자산:     ${fmt(plan.totalAssets)}원`);
-  console.log(`  투자 금액:   ${fmt(plan.investmentAmount)}원`);
-  console.log(`  현금 목표:   ${fmt(plan.cashTarget)}원`);
+  console.log(`  총 자산:     ${fmt(plan.totalAssets)}`);
+  console.log(`  투자 금액:   ${fmt(plan.investmentAmount)}`);
+  console.log(`  현금 목표:   ${fmt(plan.cashTarget)}`);
   console.log("----------------------------------------");
 
   const buys = plan.actions.filter((a) => a.action === "BUY");
@@ -30,24 +31,26 @@ export function printReport(plan: RebalancePlan): void {
 
 export function saveReport(
   plan: RebalancePlan,
-  scores: FactorScores[],
+  ranked: RankedStock[],
 ): void {
-  const outputDir = path.join("output", plan.quarter);
+  const outputDir = path.join("output", plan.marketId, plan.quarter);
   fs.mkdirSync(outputDir, { recursive: true });
 
-  // result.json
+  // YYYYMMDD.json
+  const dateStr = plan.executedAt.slice(0, 10).replace(/-/g, "");
   fs.writeFileSync(
-    path.join(outputDir, "result.json"),
+    path.join(outputDir, `${dateStr}.json`),
     JSON.stringify(plan, null, 2),
   );
 
   // ranking.csv
-  const rankingHeader = "rank,code,name,value,quality,earnings,momentum,final";
-  const rankingRows = scores
+  const detailKeys = ranked.length > 0 ? Object.keys(ranked[0].scoringDetails) : [];
+  const rankingHeader = ["rank", "code", "name", ...detailKeys, "score"].join(",");
+  const rankingRows = ranked
     .slice(0, 50)
     .map(
       (s) =>
-        `${s.rank},${s.code},${s.name},${r(s.valueScore)},${r(s.qualityScore)},${r(s.earningsScore)},${r(s.momentumScore)},${r(s.finalScore)}`,
+        [s.rank, s.code, s.name, ...detailKeys.map((k) => r(s.scoringDetails[k] ?? 0)), r(s.score)].join(","),
     );
   fs.writeFileSync(
     path.join(outputDir, "ranking.csv"),

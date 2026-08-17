@@ -1,23 +1,7 @@
-export interface Stock {
+export interface UniverseStock {
   code: string;
   name: string;
-  market: "KOSPI" | "KOSDAQ";
   marketCap: number;
-  avgTradingValue20d: number;
-}
-
-export interface Fundamentals {
-  code: string;
-  per: number | null;
-  pbr: number | null;
-  psr: number | null;
-  pcr: number | null;
-  grossProfitToAssets: number | null;
-  roa: number | null;
-  assetGrowth: number | null;
-  debtRatio: number | null;
-  operatingProfitGrowthYoY: number | null;
-  netIncomeGrowthYoY: number | null;
 }
 
 export interface PriceData {
@@ -25,17 +9,6 @@ export interface PriceData {
   currentPrice: number;
   price1mAgo: number;
   price12mAgo: number;
-}
-
-export interface FactorScores {
-  code: string;
-  name: string;
-  valueScore: number;
-  qualityScore: number;
-  earningsScore: number;
-  momentumScore: number;
-  finalScore: number;
-  rank: number;
 }
 
 export interface Position {
@@ -65,7 +38,7 @@ export interface RebalanceAction {
 }
 
 export interface RebalancePlan {
-  runId: string;
+  marketId: string;
   quarter: string;
   executedAt: string;
   totalAssets: number;
@@ -78,7 +51,7 @@ export interface TargetPortfolioItem {
   code: string;
   name: string;
   rank: number;
-  finalScore: number;
+  score: number;
   targetWeight: number;
   targetAmount: number;
   targetQuantity: number;

@@ -38,7 +38,7 @@ program
     const today = new Date();
     const quarter = `${today.getFullYear()}-Q${Math.ceil((today.getMonth() + 1) / 3)}`;
 
-    if (!force) {
+    if (!force && !dryRun) {
       const day = today.getDay();
       if (day === 0 || day === 6) {
         console.log("[Skip] 주말은 거래일이 아닙니다.");

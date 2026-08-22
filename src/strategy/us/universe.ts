@@ -12,7 +12,7 @@ export async function buildUsUniverse(): Promise<UsTvStock[]> {
   ];
 
   if (US_STRATEGY.excludeFinancials) {
-    filters.push({ left: "sector", operation: "not_equal", right: "Finance" });
+    filters.push({ left: "sector", operation: "nequal", right: "Finance" });
   }
 
   console.log("[Universe] TradingView Scanner 조회 중...");

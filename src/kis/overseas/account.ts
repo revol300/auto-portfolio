@@ -15,7 +15,7 @@ export async function fetchOverseasAccountBalance(
     "/uapi/overseas-stock/v1/trading/inquire-balance",
     {
       headers: {
-        tr_id: "VTTS3012R",
+        tr_id: "TTTS3012R",
       },
       params: {
         CANO: accountNo.slice(0, 8),

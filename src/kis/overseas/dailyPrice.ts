@@ -74,9 +74,13 @@ export async function fetchBulkPrices12mAgo(
   const result = new Map<string, number>();
 
   for (const stock of stocks) {
-    const price = await fetchPrice12mAgo(client, stock.exchange, stock.symbol);
-    result.set(stock.symbol, price);
-    await new Promise((r) => setTimeout(r, 100));
+    try {
+      const price = await fetchPrice12mAgo(client, stock.exchange, stock.symbol);
+      result.set(stock.symbol, price);
+    } catch {
+      console.warn(`[Warn] ${stock.symbol} 12M 가격 조회 실패, 스킵`);
+      result.set(stock.symbol, 0);
+    }
   }
 
   return result;

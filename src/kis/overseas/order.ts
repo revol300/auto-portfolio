@@ -19,7 +19,6 @@ export async function executeOverseasOrders(
       quantity: Math.abs(action.orderQuantity),
       side: "SELL",
     });
-    await new Promise((r) => setTimeout(r, 500));
   }
 
   // TODO: 매도 체결 확인 후 매수 진행
@@ -32,7 +31,6 @@ export async function executeOverseasOrders(
       quantity: action.orderQuantity,
       side: "BUY",
     });
-    await new Promise((r) => setTimeout(r, 500));
   }
 }
 
@@ -46,7 +44,7 @@ async function placeOverseasOrder(
     side: "BUY" | "SELL";
   },
 ): Promise<void> {
-  const trId = params.side === "BUY" ? "VTTT1002U" : "VTTT1001U";
+  const trId = params.side === "BUY" ? "TTTT1002U" : "TTTT1001U";
 
   await client.post(
     "/uapi/overseas-stock/v1/trading/order",

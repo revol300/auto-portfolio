@@ -20,7 +20,6 @@ export async function executeOrders(
       quantity: Math.abs(action.orderQuantity),
       side: "SELL",
     });
-    await new Promise((r) => setTimeout(r, 500));
   }
 
   // TODO: 매도 체결 확인 후 매수 진행
@@ -34,7 +33,6 @@ export async function executeOrders(
       quantity: action.orderQuantity,
       side: "BUY",
     });
-    await new Promise((r) => setTimeout(r, 500));
   }
 }
 
@@ -48,7 +46,7 @@ async function placeOrder(
     side: "BUY" | "SELL";
   },
 ): Promise<void> {
-  const trId = params.side === "BUY" ? "VTTC0802U" : "VTTC0801U";
+  const trId = params.side === "BUY" ? "TTTC0802U" : "TTTC0801U";
 
   await client.post(
     "/uapi/domestic-stock/v1/trading/order-cash",

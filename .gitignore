@@ -3,3 +3,4 @@ dist/
 .env
 *.db
 output/
+.token-cache.json

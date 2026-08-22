@@ -42,7 +42,6 @@ export async function fetchBulkPrices(
   for (const code of codes) {
     const data = await fetchPriceData(client, code);
     results.push(data);
-    await new Promise((r) => setTimeout(r, 100));
   }
   return results;
 }

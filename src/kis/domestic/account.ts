@@ -15,7 +15,7 @@ export async function fetchAccountBalance(
     "/uapi/domestic-stock/v1/trading/inquire-balance",
     {
       headers: {
-        tr_id: "VTTC8434R",
+        tr_id: "TTTC8434R",
       },
       params: {
         CANO: accountNo.slice(0, 8),

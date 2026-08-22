@@ -3,6 +3,9 @@ import { getAccessToken, getBaseUrl } from "./auth.js";
 
 let clientInstance: AxiosInstance | null = null;
 
+const MIN_REQUEST_INTERVAL = 120; // ms (~8 req/sec, KIS 초당 10건 제한 대비 안전 마진)
+let lastRequestTime = 0;
+
 export async function createKisClient(): Promise<AxiosInstance> {
   if (clientInstance) return clientInstance;
 
@@ -18,6 +21,17 @@ export async function createKisClient(): Promise<AxiosInstance> {
       appsecret: appSecret,
       "Content-Type": "application/json; charset=utf-8",
     },
+  });
+
+  // Rate limiter: 요청 간 최소 간격 보장
+  clientInstance.interceptors.request.use(async (config) => {
+    const now = Date.now();
+    const elapsed = now - lastRequestTime;
+    if (elapsed < MIN_REQUEST_INTERVAL) {
+      await new Promise((r) => setTimeout(r, MIN_REQUEST_INTERVAL - elapsed));
+    }
+    lastRequestTime = Date.now();
+    return config;
   });
 
   clientInstance.interceptors.response.use(

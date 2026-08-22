@@ -1,51 +1,33 @@
-import type { AxiosInstance } from "axios";
-import type { UsStock } from "./types.js";
-import { searchOverseasStocks, type KisSearchCondition } from "../../kis/overseas/stock.js";
+import type { UsTvStock } from "./types.js";
 import { US_STRATEGY } from "./config.js";
-import { filterNonCommonStock, filterFinancials, filterByLiquidity } from "./filters.js";
+import { fetchEvEbitdaTop } from "../../tradingview/scanner.js";
 
-function buildCondition(exchange: string): KisSearchCondition {
-  return {
-    EXCD: exchange,
-    CO_YN_PRICECUR: "1",
-    CO_ST_PRICECUR: String(US_STRATEGY.minPrice),
-    CO_EN_PRICECUR: "99999999",
-    CO_YN_VALX: "1",
-    CO_ST_VALX: String(US_STRATEGY.minMarketCap / 1000),
-    CO_EN_VALX: "99999999999",
-    CO_YN_VOLUME: "",
-    CO_YN_AMT: "",
-    CO_YN_EPS: "",
-    CO_YN_PER: "",
-  };
-}
+export async function buildUsUniverse(): Promise<UsTvStock[]> {
+  const filters = [
+    { left: "close", operation: "egreater", right: US_STRATEGY.minPrice },
+    { left: "market_cap_basic", operation: "egreater", right: US_STRATEGY.minMarketCap },
+    { left: "Value.Traded", operation: "egreater", right: US_STRATEGY.minDollarVolume },
+    { left: "enterprise_value_ebitda_ttm", operation: "greater", right: 0 },
+    { left: "type", operation: "equal", right: "stock" },
+  ];
 
-export async function buildUsUniverse(client: AxiosInstance): Promise<UsStock[]> {
-  const results = await Promise.all(
-    US_STRATEGY.exchanges.map((exchange) =>
-      searchOverseasStocks(client, buildCondition(exchange)),
-    ),
-  );
+  if (US_STRATEGY.excludeFinancials) {
+    filters.push({ left: "sector", operation: "not_equal", right: "Finance" });
+  }
 
-  let stocks: UsStock[] = results.flat().map((item) => ({
-    code: item.symbol,
-    name: item.name,
-    marketCap: item.marketCap,
-    exchange: item.exchange,
-    sector: "",
-    price: item.price,
-    dollarVolume: item.price * item.volume,
+  console.log("[Universe] TradingView Scanner 조회 중...");
+
+  const results = await fetchEvEbitdaTop(filters, US_STRATEGY.valueUniverseSize);
+
+  console.log(`[Universe] EV/EBITDA Top ${results.length}종목 조회 완료`);
+
+  return results.map((r) => ({
+    code: r.symbol,
+    name: r.name,
+    marketCap: r.marketCap,
+    exchange: r.exchange,
+    sector: r.sector,
+    price: r.price,
+    evEbitda: r.evEbitda,
   }));
-  console.log(`[Universe] KIS 조건검색 결과: ${stocks.length}`);
-
-  stocks = filterNonCommonStock(stocks);
-  console.log(`[Universe] 보통주 필터 후: ${stocks.length}`);
-
-  stocks = filterFinancials(stocks);
-  console.log(`[Universe] 금융주 제외 후: ${stocks.length}`);
-
-  stocks = filterByLiquidity(stocks);
-  console.log(`[Universe] 유동성 필터 후: ${stocks.length}`);
-
-  return stocks;
 }

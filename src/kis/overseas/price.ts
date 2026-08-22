@@ -25,15 +25,14 @@ export async function fetchOverseasPrice(
 
 export async function fetchBulkOverseasPrices(
   client: AxiosInstance,
-  symbols: string[],
+  stocks: Array<{ symbol: string; exchange: string }>,
 ): Promise<PriceData[]> {
   const results: PriceData[] = [];
 
-  for (const symbol of symbols) {
-    // TODO: exchange 정보를 symbol에서 분리하거나 별도로 전달
-    const price = await fetchOverseasPrice(client, "NAS", symbol);
+  for (const stock of stocks) {
+    const price = await fetchOverseasPrice(client, stock.exchange, stock.symbol);
     results.push({
-      code: symbol,
+      code: stock.symbol,
       currentPrice: price,
       price1mAgo: price,
       price12mAgo: price,

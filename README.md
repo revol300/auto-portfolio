@@ -7,7 +7,7 @@
 | 시장 | 전략 | 종목 수 | 리밸런싱 | 상세 |
 |---|---|---:|---|---|
 | KO | 멀티팩터 (Value·Quality·Earnings·Momentum) | 20 | 3·6·9·12월 | [KO_STRATEGY.md](KO_STRATEGY.md) |
-| US | EV/EBITDA 저평가 | 25 | 1·4·7·10월 | [US_STRATEGY.md](US_STRATEGY.md) |
+| US | EV/EBITDA + Momentum Rotation | 25 | 1·4·7·10월 | [US_STRATEGY.md](US_STRATEGY.md) |
 
 ## 필요 조건
 
@@ -142,10 +142,52 @@ output/us/2026-Q4/
 
 | 데이터 | 소스 | 시장 |
 |---|---|---|
-| 종목 목록, 주가, 거래대금, 시가총액 | KIS Open API | KO / US |
+| 종목 목록, 주가, 거래대금, 시가총액 | KIS Open API | KO |
 | 재무제표 (매출, 영업이익, 자산, 부채 등) | DART OpenAPI | KO |
-| EBITDA, Debt, Cash | FundamentalsProvider (TBD) | US |
+| EV/EBITDA Top 50 (Value Universe) | TradingView Scanner API | US |
+| 12M 가격 (Momentum 계산) | KIS 해외주식 월봉 API | US |
 | 잔고 조회, 주문 | KIS Open API | KO / US |
+
+### KIS 해외주식 조건검색 API 지원범위 (HHDFS76200200)
+
+KIS Open API의 해외주식 조건검색(`/uapi/overseas-stock/v1/quotations/inquire-search`)은 다음 항목만 지원한다:
+
+| 항목 | 지원 | 파라미터 |
+|---|---|---|
+| 주가 범위 | O | `CO_ST_PRICECUR` / `CO_EN_PRICECUR` |
+| 시가총액 | O | `CO_ST_VALX` / `CO_EN_VALX` |
+| 거래량 | O | `CO_YN_VOLUME` |
+| 거래대금 | O | `CO_YN_AMT` |
+| EPS | O | `CO_YN_EPS` |
+| PER | O | `CO_YN_PER` |
+| 섹터/업종 | X | — |
+| EV/EBITDA | X | — |
+| 재무제표 기반 필터 | X | — |
+| HTS 조건검색식 (psearch) | X | 해외주식 미지원 |
+
+한국주식은 HTS 조건검색식(psearch API)으로 서버사이드 필터링이 가능하지만, 해외주식에는 동일한 기능이 없다. EV/EBITDA, 섹터 등 고급 필터가 필요한 미국주식 전략은 **TradingView Scanner API**(`scanner.tradingview.com/america/scan`)를 사용한다.
+
+### 미국주식 전략 조건식 설계
+
+```
+[TradingView Scanner API — 서버사이드]
+├── enterprise_value_ebitda_ttm > 0   EV/EBITDA(TTM) 양수만
+├── close >= 5                        주가 >= $5
+├── market_cap_basic >= 500,000,000   시가총액 >= $500M
+├── Value.Traded >= 5,000,000         일 거래대금 >= $5M
+├── sector != "Finance"               금융섹터 제외
+├── type == "stock"                   보통주만
+└── 정렬: enterprise_value_ebitda_ttm 오름차순 → Top 50
+
+[KIS 해외주식 월봉 API (HHDFS76240000)]
+└── 12개월 전 종가 조회 → Momentum 계산
+
+[포트폴리오 구성]
+├── 양의 Momentum 종목만 필터
+├── Momentum 내림차순 → Top 25
+├── 각 슬롯 = 4% (1/25)
+└── 빈 슬롯 → IEF (미국 7-10년 국채 ETF)
+```
 
 ## 백테스팅 레퍼런스
 

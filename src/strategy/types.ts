@@ -36,5 +36,5 @@ export interface RebalanceStrategy {
   ): TargetPortfolioItem[];
   fetchAccountBalance(): Promise<AccountBalance>;
   fetchPrices(codes: string[]): Promise<PriceData[]>;
-  executeOrders(actions: RebalanceAction[], priceMap: Map<string, number>): Promise<void>;
+  executeOrders(actions: RebalanceAction[], priceMap: Map<string, number>, exchangeMap: Map<string, string>): Promise<void>;
 }

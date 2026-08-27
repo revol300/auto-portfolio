@@ -134,7 +134,7 @@ export class UsEvEbitdaStrategy implements RebalanceStrategy {
     return fetchBulkOverseasPrices(this.client, stocks);
   }
 
-  async executeOrders(actions: RebalanceAction[], priceMap: Map<string, number>): Promise<void> {
-    return executeOverseasOrders(this.client, actions, priceMap);
+  async executeOrders(actions: RebalanceAction[], priceMap: Map<string, number>, _exchangeMap: Map<string, string>): Promise<void> {
+    return executeOverseasOrders(this.client, actions, priceMap, this.exchangeMap);
   }
 }

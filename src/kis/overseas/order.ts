@@ -5,6 +5,7 @@ export async function executeOverseasOrders(
   client: AxiosInstance,
   actions: RebalanceAction[],
   priceMap: Map<string, number>,
+  exchangeMap: Map<string, string>,
 ): Promise<void> {
   const accountNo = process.env.KIS_US_ACCOUNT_NO!;
   const productCode = process.env.KIS_US_ACCOUNT_PRODUCT_CODE ?? "01";
@@ -14,10 +15,12 @@ export async function executeOverseasOrders(
 
   for (const action of sells) {
     const price = priceMap.get(action.code) ?? 0;
+    const exchange = exchangeMap.get(action.code) ?? "NASD";
     await placeOverseasOrder(client, {
       accountNo,
       productCode,
       symbol: action.code,
+      exchange,
       quantity: Math.abs(action.orderQuantity),
       price,
       side: "SELL",
@@ -28,10 +31,12 @@ export async function executeOverseasOrders(
 
   for (const action of buys) {
     const price = priceMap.get(action.code) ?? 0;
+    const exchange = exchangeMap.get(action.code) ?? "NASD";
     await placeOverseasOrder(client, {
       accountNo,
       productCode,
       symbol: action.code,
+      exchange,
       quantity: action.orderQuantity,
       price,
       side: "BUY",
@@ -39,23 +44,32 @@ export async function executeOverseasOrders(
   }
 }
 
+// KIS 가격 조회 거래소 코드 → 주문 거래소 코드 변환
+const ORDER_EXCHANGE_MAP: Record<string, string> = {
+  NAS: "NASD",
+  NYS: "NYSE",
+  AMS: "AMEX",
+};
+
 async function placeOverseasOrder(
   client: AxiosInstance,
   params: {
     accountNo: string;
     productCode: string;
     symbol: string;
+    exchange: string;
     quantity: number;
     price: number;
     side: "BUY" | "SELL";
   },
 ): Promise<void> {
   const trId = params.side === "BUY" ? "TTTT1002U" : "TTTT1006U";
+  const orderExchange = ORDER_EXCHANGE_MAP[params.exchange] ?? params.exchange;
 
   const body: Record<string, string> = {
     CANO: params.accountNo.slice(0, 8),
     ACNT_PRDT_CD: params.productCode,
-    OVRS_EXCG_CD: "NASD",
+    OVRS_EXCG_CD: orderExchange,
     PDNO: params.symbol,
     ORD_DVSN: "00",
     ORD_QTY: String(params.quantity),

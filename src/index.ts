@@ -99,7 +99,7 @@ program
       });
 
       printReport(plan);
-      saveReport(plan, ranked);
+      saveReport(plan, ranked, dryRun);
 
       if (!dryRun) {
         console.log("[Execute] 주문 실행 중...");

@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "rebalance:ko": "tsx src/index.ts rebalance --market ko",
+    "rebalance:ko:execute": "tsx src/index.ts rebalance --market ko --execute",
     "rebalance:us": "tsx src/index.ts rebalance --market us",
+    "rebalance:us:execute": "tsx src/index.ts rebalance --market us --execute",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

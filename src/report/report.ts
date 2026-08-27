@@ -32,8 +32,10 @@ export function printReport(plan: RebalancePlan): void {
 export function saveReport(
   plan: RebalancePlan,
   ranked: RankedStock[],
+  dryRun: boolean,
 ): void {
-  const outputDir = path.join("output", plan.marketId, plan.quarter);
+  const base = path.join("output", plan.marketId, plan.quarter);
+  const outputDir = dryRun ? path.join(base, "dry-run") : base;
   fs.mkdirSync(outputDir, { recursive: true });
 
   // YYYYMMDD.json

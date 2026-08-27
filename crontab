@@ -2,13 +2,11 @@
 #
 # 설치: crontab /path/to/auto-portfolio/crontab
 # 확인: crontab -l
-#
-# 로그는 output/cron.log 에 누적 저장
 
 PROJECT_DIR=/Users/jeongyong/Projects/trade/auto-portfolio
 
 # KO: 3,6,9,12월 마지막 영업일 15:00 (장 마감 30분 전)
-0 15 28-31 3,6,9,12 * cd $PROJECT_DIR && pnpm run rebalance:ko >> output/cron.log 2>&1
+0 15 28-31 3,6,9,12 * cd $PROJECT_DIR && pnpm run rebalance:ko:execute
 
 # US: 1,4,7,10월 첫 번째 영업일 06:00 (미국장 마감 후, KST 기준)
-0 6 1-5 1,4,7,10 * cd $PROJECT_DIR && pnpm run rebalance:us >> output/cron.log 2>&1
+0 6 1-5 1,4,7,10 * cd $PROJECT_DIR && pnpm run rebalance:us:execute

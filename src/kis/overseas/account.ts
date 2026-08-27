@@ -11,14 +11,17 @@ export async function fetchOverseasAccountBalance(
     throw new Error("KIS_US_ACCOUNT_NO 환경변수를 설정하세요.");
   }
 
-  const res = await client.get(
+  const cano = accountNo.slice(0, 8);
+
+  // 1) 해외주식 잔고 조회 (보유종목)
+  const balanceRes = await client.get(
     "/uapi/overseas-stock/v1/trading/inquire-balance",
     {
       headers: {
         tr_id: "TTTS3012R",
       },
       params: {
-        CANO: accountNo.slice(0, 8),
+        CANO: cano,
         ACNT_PRDT_CD: productCode,
         OVRS_EXCG_CD: "NASD",
         TR_CRCY_CD: "USD",
@@ -28,9 +31,7 @@ export async function fetchOverseasAccountBalance(
     },
   );
 
-  // TODO: KIS 해외주식 잔고 조회 응답 구조에 맞게 매핑
-  const output1: Record<string, string>[] = res.data.output1 ?? [];
-  const output2 = res.data.output2?.[0] ?? {};
+  const output1: Record<string, string>[] = balanceRes.data.output1 ?? [];
 
   const positions: Position[] = output1
     .filter((item) => Number(item.ovrs_cblc_qty) > 0)
@@ -42,9 +43,32 @@ export async function fetchOverseasAccountBalance(
       evaluationAmount: Number(item.ovrs_stck_evlu_amt ?? 0),
     }));
 
+  // 2) 해외주식 매수가능금액 조회 (USD 현금 잔고)
+  const buyableRes = await client.get(
+    "/uapi/overseas-stock/v1/trading/inquire-psamount",
+    {
+      headers: {
+        tr_id: "TTTS3007R",
+      },
+      params: {
+        CANO: cano,
+        ACNT_PRDT_CD: productCode,
+        OVRS_EXCG_CD: "NASD",
+        OVRS_ORD_UNPR: "1",
+        ITEM_CD: "AAPL",
+      },
+    },
+  );
+
+  const buyableOutput = buyableRes.data.output ?? {};
+  const cashBalance = Number(buyableOutput.ovrs_ord_psbl_amt ?? 0);
+
+  const positionTotal = positions.reduce((sum, p) => sum + p.evaluationAmount, 0);
+  const totalAssets = positionTotal + cashBalance;
+
   return {
-    totalAssets: Number(output2.tot_evlu_pfls_amt ?? 0),
-    cashBalance: Number(output2.frcr_pchs_amt1 ?? 0),
+    totalAssets,
+    cashBalance,
     positions,
   };
 }

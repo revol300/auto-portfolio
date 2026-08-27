@@ -73,6 +73,11 @@ program
       const account = await strategy.fetchAccountBalance();
       console.log(`[Account] 총 자산: ${account.totalAssets.toLocaleString()}`);
 
+      if (account.totalAssets === 0) {
+        console.error("[Error] 총 자산이 0입니다. 계좌 잔고를 확인하세요.");
+        return;
+      }
+
       const universe = await strategy.buildUniverse();
       const scoringData = await strategy.fetchScoringData(universe);
       const ranked = strategy.rankStocks(scoringData);

@@ -103,7 +103,8 @@ program
 
       if (!dryRun) {
         console.log("[Execute] 주문 실행 중...");
-        await strategy.executeOrders(plan.actions);
+        const priceMap = new Map(prices.map((p) => [p.code, p.currentPrice]));
+        await strategy.executeOrders(plan.actions, priceMap);
         console.log("[Execute] 주문 완료");
       }
 

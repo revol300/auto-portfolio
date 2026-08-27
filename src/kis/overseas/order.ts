@@ -4,6 +4,7 @@ import type { RebalanceAction } from "../../types.js";
 export async function executeOverseasOrders(
   client: AxiosInstance,
   actions: RebalanceAction[],
+  priceMap: Map<string, number>,
 ): Promise<void> {
   const accountNo = process.env.KIS_US_ACCOUNT_NO!;
   const productCode = process.env.KIS_US_ACCOUNT_PRODUCT_CODE ?? "01";
@@ -12,11 +13,13 @@ export async function executeOverseasOrders(
   const buys = actions.filter((a) => a.action === "BUY");
 
   for (const action of sells) {
+    const price = priceMap.get(action.code) ?? 0;
     await placeOverseasOrder(client, {
       accountNo,
       productCode,
       symbol: action.code,
       quantity: Math.abs(action.orderQuantity),
+      price,
       side: "SELL",
     });
   }
@@ -24,11 +27,13 @@ export async function executeOverseasOrders(
   // TODO: 매도 체결 확인 후 매수 진행
 
   for (const action of buys) {
+    const price = priceMap.get(action.code) ?? 0;
     await placeOverseasOrder(client, {
       accountNo,
       productCode,
       symbol: action.code,
       quantity: action.orderQuantity,
+      price,
       side: "BUY",
     });
   }
@@ -41,23 +46,30 @@ async function placeOverseasOrder(
     productCode: string;
     symbol: string;
     quantity: number;
+    price: number;
     side: "BUY" | "SELL";
   },
 ): Promise<void> {
-  const trId = params.side === "BUY" ? "TTTT1002U" : "TTTT1001U";
+  const trId = params.side === "BUY" ? "TTTT1002U" : "TTTT1006U";
 
-  await client.post(
+  const body: Record<string, string> = {
+    CANO: params.accountNo.slice(0, 8),
+    ACNT_PRDT_CD: params.productCode,
+    OVRS_EXCG_CD: "NASD",
+    PDNO: params.symbol,
+    ORD_DVSN: "00",
+    ORD_QTY: String(params.quantity),
+    OVRS_ORD_UNPR: params.price.toFixed(2),
+    ORD_SVR_DVSN_CD: "0",
+  };
+
+  if (params.side === "SELL") {
+    body.SLL_TYPE = "00";
+  }
+
+  const res = await client.post(
     "/uapi/overseas-stock/v1/trading/order",
-    {
-      CANO: params.accountNo.slice(0, 8),
-      ACNT_PRDT_CD: params.productCode,
-      OVRS_EXCG_CD: "NASD",
-      PDNO: params.symbol,
-      ORD_DVSN: "00", // 지정가 (해외주식은 시장가 미지원 거래소 있음)
-      ORD_QTY: String(params.quantity),
-      OVRS_ORD_UNPR: "0",
-      SLL_TYPE: params.side === "SELL" ? "00" : "",
-    },
+    body,
     {
       headers: {
         tr_id: trId,
@@ -65,7 +77,15 @@ async function placeOverseasOrder(
     },
   );
 
+  const rtCd = res.data.rt_cd;
+  const msg = res.data.msg1?.trim() ?? "";
+
+  if (rtCd !== "0") {
+    console.error(`[ORDER FAIL] ${params.side} ${params.symbol} x ${params.quantity} @ $${params.price.toFixed(2)} — ${msg}`);
+    return;
+  }
+
   console.log(
-    `[ORDER] ${params.side} ${params.symbol} x ${params.quantity}`,
+    `[ORDER] ${params.side} ${params.symbol} x ${params.quantity} @ $${params.price.toFixed(2)} — ${msg}`,
   );
 }

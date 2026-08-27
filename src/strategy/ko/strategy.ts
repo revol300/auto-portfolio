@@ -108,7 +108,7 @@ export class KoMultiFactorStrategy implements RebalanceStrategy {
     return fetchBulkPrices(this.client, codes);
   }
 
-  async executeOrders(actions: RebalanceAction[]): Promise<void> {
+  async executeOrders(actions: RebalanceAction[], _priceMap: Map<string, number>): Promise<void> {
     return executeOrders(this.client, actions);
   }
 }

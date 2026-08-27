@@ -3,7 +3,7 @@ import { getAccessToken, getBaseUrl } from "./auth.js";
 
 let clientInstance: AxiosInstance | null = null;
 
-const MIN_REQUEST_INTERVAL = 120; // ms (~8 req/sec, KIS 초당 10건 제한 대비 안전 마진)
+const MIN_REQUEST_INTERVAL = 200; // ms (5 req/sec, KIS 초당 10건 제한 대비 안전 마진)
 let lastRequestTime = 0;
 
 export async function createKisClient(): Promise<AxiosInstance> {

@@ -10,30 +10,42 @@ export async function fetchOverseasMonthlyPrices(
   exchange: string,
   symbol: string,
 ): Promise<MonthlyBar[]> {
-  const res = await client.get(
-    "/uapi/overseas-price/v1/quotations/dailyprice",
-    {
-      headers: {
-        tr_id: "HHDFS76240000",
-      },
-      params: {
-        AUTH: "",
-        EXCD: exchange,
-        SYMB: symbol,
-        GUBN: "2", // 월봉
-        BYMD: "",
-        MODP: "1", // 수정주가
-      },
-    },
-  );
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await client.get(
+        "/uapi/overseas-price/v1/quotations/dailyprice",
+        {
+          headers: {
+            tr_id: "HHDFS76240000",
+          },
+          params: {
+            AUTH: "",
+            EXCD: exchange,
+            SYMB: symbol,
+            GUBN: "2", // 월봉
+            BYMD: "",
+            MODP: "1", // 수정주가
+          },
+        },
+      );
 
-  const items = res.data.output2 ?? [];
-  return items
-    .map((item: Record<string, string>) => ({
-      date: item.xymd ?? "",
-      close: Number(item.clos ?? 0),
-    }))
-    .filter((bar: MonthlyBar) => bar.date && bar.close > 0);
+      const items = res.data.output2 ?? [];
+      return items
+        .map((item: Record<string, string>) => ({
+          date: item.xymd ?? "",
+          close: Number(item.clos ?? 0),
+        }))
+        .filter((bar: MonthlyBar) => bar.date && bar.close > 0);
+    } catch (err: any) {
+      if (err.response?.data?.msg_cd === "EGW00201") {
+        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  return [];
 }
 
 export async function fetchPrice12mAgo(

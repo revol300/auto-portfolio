@@ -19,10 +19,13 @@ function loadHistory(): BalanceSnapshot[] {
   }
 }
 
+const MAX_HISTORY = 100;
+
 function saveHistory(history: BalanceSnapshot[]): void {
+  const trimmed = history.length > MAX_HISTORY ? history.slice(-MAX_HISTORY) : history;
   const dir = path.dirname(HISTORY_PATH);
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(HISTORY_PATH, JSON.stringify(history, null, 2));
+  fs.writeFileSync(HISTORY_PATH, JSON.stringify(trimmed, null, 2));
 }
 
 function findYesterdayBalance(history: BalanceSnapshot[]): BalanceSnapshot | null {

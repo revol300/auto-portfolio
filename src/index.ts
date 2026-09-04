@@ -8,6 +8,7 @@ import type { MarketId } from "./strategy/types.js";
 import { calculateTargetQuantities } from "./portfolio/positionSizing.js";
 import { createRebalancePlan } from "./portfolio/rebalance.js";
 import { printReport, saveReport } from "./report/report.js";
+import { sweepProfit } from "./crypto/sweepProfit.js";
 
 const program = new Command();
 
@@ -109,6 +110,19 @@ program
       }
 
       console.log("[Done] 리밸런싱 완료");
+    } catch (error) {
+      console.error("[Error]", error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("sweep-profit")
+  .description("바이낸스 선물 수익 절반을 현물 지갑으로 이체")
+  .option("--execute", "실제 이체 실행 (기본값: dry-run)")
+  .action(async (options) => {
+    try {
+      await sweepProfit({ execute: !!options.execute });
     } catch (error) {
       console.error("[Error]", error);
       process.exit(1);

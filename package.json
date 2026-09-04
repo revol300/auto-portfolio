@@ -8,6 +8,8 @@
     "rebalance:ko:execute": "tsx src/index.ts rebalance --market ko --execute",
     "rebalance:us": "tsx src/index.ts rebalance --market us",
     "rebalance:us:execute": "tsx src/index.ts rebalance --market us --execute",
+    "sweep-profit": "tsx src/index.ts sweep-profit",
+    "sweep-profit:execute": "tsx src/index.ts sweep-profit --execute",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

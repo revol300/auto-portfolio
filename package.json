@@ -10,6 +10,8 @@
     "rebalance:us:execute": "tsx src/index.ts rebalance --market us --execute",
     "sweep-profit": "tsx src/index.ts sweep-profit",
     "sweep-profit:execute": "tsx src/index.ts sweep-profit --execute",
+    "withdraw": "tsx src/index.ts withdraw",
+    "withdraw:execute": "tsx src/index.ts withdraw --execute",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

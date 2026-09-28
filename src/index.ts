@@ -9,6 +9,7 @@ import { calculateTargetQuantities } from "./portfolio/positionSizing.js";
 import { createRebalancePlan } from "./portfolio/rebalance.js";
 import { printReport, saveReport } from "./report/report.js";
 import { sweepProfit } from "./crypto/sweepProfit.js";
+import { withdrawToBybit } from "./crypto/withdraw.js";
 
 const program = new Command();
 
@@ -125,6 +126,23 @@ program
       await sweepProfit({ execute: !!options.execute });
     } catch (error) {
       console.error("[Error]", error);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("withdraw")
+  .description("바이낸스 현물 USDT를 BSC 네트워크로 Bybit에 출금")
+  .option("--amount <usdt>", "출금할 USDT 금액 (기본값: 최근 잔고 차액의 25%)")
+  .option("--execute", "실제 출금 실행 (기본값: dry-run)")
+  .action(async (options) => {
+    try {
+      await withdrawToBybit({
+        execute: !!options.execute,
+        amount: options.amount as string | undefined,
+      });
+    } catch (error) {
+      console.error("[Error]", error instanceof Error ? error.message : error);
       process.exit(1);
     }
   });

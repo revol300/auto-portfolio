@@ -52,7 +52,7 @@ pnpm install
 cp .env.example .env
 ```
 
-`.env` 파일에 발급받은 키를 입력:
+`.env.example`을 복사한 `.env` 파일에 발급받은 키와 주소를 입력합니다. `.env`는 Git에 커밋하지 않습니다.
 
 ```env
 # 공통
@@ -70,6 +70,13 @@ KIS_US_ACCOUNT_PRODUCT_CODE=01
 
 # DART (한국주식 전략 사용 시)
 DART_API_KEY=발급받은_DART_API키
+
+# Binance API (sweep-profit / withdraw 사용 시)
+BINANCE_API_KEY=발급받은_바이낸스_API키
+BINANCE_API_SECRET=발급받은_바이낸스_API_시크릿
+
+# Bybit USDT 입금 주소 (BSC/BEP20 네트워크)
+BYBIT_USDT_BSC_ADDRESS=0x로_시작하는_바이비트_USDT_BEP20_입금주소
 ```
 
 ## 실행
@@ -89,6 +96,43 @@ pnpm run rebalance:ko -- --force
 ```
 
 기본값은 dry-run으로, 주문 없이 결과만 생성한다. `--execute`를 명시해야 실제 주문이 나간다.
+
+### Bybit USDT 출금
+
+`withdraw`는 `sweep-profit`과 독립적으로 Binance Spot의 USDT를 BSC(BEP20) 네트워크로 출금한다. Binance 출금 주소록에 Bybit 주소를 `USDT / BSC`로 등록하고 출금 화이트리스트를 활성화해야 한다.
+
+#### 환경변수 설정
+
+1. Bybit에서 `Assets → Deposit → USDT → BSC (BEP20)`을 선택한다.
+2. 표시된 입금주소를 복사해 `.env`의 `BYBIT_USDT_BSC_ADDRESS`에 입력한다. ERC20, TRC20 주소를 넣으면 안 된다.
+3. Binance API 관리에서 API 키를 생성하고 `BINANCE_API_KEY`, `BINANCE_API_SECRET`을 입력한다.
+4. API 키에는 잔고 조회와 출금 API 권한이 필요하다. 가능하면 실행 환경의 고정 IP를 IP 제한에 등록한다.
+5. Binance 출금 주소 관리에서 복사한 주소를 `USDT`, 네트워크 `BSC`로 등록하고 출금 화이트리스트를 활성화한다.
+6. Binance 출금 주소록에 등록된 주소와 `.env`의 주소가 한 글자까지 같아야 한다.
+
+`withdraw`는 실행 전에 다음을 확인하고 하나라도 맞지 않으면 출금하지 않는다.
+
+- `BYBIT_USDT_BSC_ADDRESS`가 `0x` + 40자리 hexadecimal 주소인지 확인
+- Binance 주소록에 동일한 주소가 `USDT / BSC`로 등록되어 있는지 확인
+- 해당 주소의 Binance 화이트리스트가 활성화되어 있는지 확인
+- Binance에서 현재 BSC 출금이 가능한지 확인
+- Binance Spot 잔고와 최소 출금액 확인
+
+API 시크릿과 Bybit 입금주소는 채팅, 로그, Git 저장소에 공개하지 않는다. API 키가 노출되면 즉시 폐기하고 재발급한다.
+
+```bash
+# balance-history.json의 최근 두 잔고 차액 중 25% 계산 (dry-run)
+pnpm withdraw
+
+# 계산된 금액 실제 출금
+pnpm withdraw:execute
+
+# 잔고 기록 대신 지정 금액 사용 (dry-run / 실제 출금)
+pnpm withdraw --amount 10
+pnpm withdraw:execute --amount 10
+```
+
+실행 시 BSC 출금 가능 여부, 주소 화이트리스트, 최소 출금액, 출금 단위와 Spot USDT 잔액을 확인한다. 출금 수수료는 지정 금액에서 차감되어 Bybit에 입금된다.
 
 ### 실행 전 검사
 

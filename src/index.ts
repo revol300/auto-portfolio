@@ -100,12 +100,17 @@ program
         config,
       });
 
-      printReport(plan);
-      saveReport(plan, ranked, dryRun);
+      // Retain held-position prices for full exits, then prefer fresh quotes.
+      const priceMap = new Map(account.positions.map((p) => [p.code, p.currentPrice]));
+      for (const price of prices) {
+        priceMap.set(price.code, price.currentPrice);
+      }
+
+      printReport(plan, priceMap);
+      saveReport(plan, ranked, dryRun, priceMap);
 
       if (!dryRun) {
         console.log("[Execute] 주문 실행 중...");
-        const priceMap = new Map(prices.map((p) => [p.code, p.currentPrice]));
         await strategy.executeOrders(plan.actions, priceMap, new Map());
         console.log("[Execute] 주문 완료");
       }

@@ -63,8 +63,15 @@ async function placeOverseasOrder(
     side: "BUY" | "SELL";
   },
 ): Promise<void> {
+  if (!Number.isFinite(params.price) || params.price <= 0) {
+    throw new Error(`Invalid current price for ${params.symbol}: ${params.price}`);
+  }
+
   const trId = params.side === "BUY" ? "TTTT1002U" : "TTTT1006U";
   const orderExchange = ORDER_EXCHANGE_MAP[params.exchange] ?? params.exchange;
+  const orderPrice = Math.round(
+    params.price * (params.side === "BUY" ? 1.05 : 0.95) * 100,
+  ) / 100;
 
   const body: Record<string, string> = {
     CANO: params.accountNo.slice(0, 8),
@@ -73,7 +80,7 @@ async function placeOverseasOrder(
     PDNO: params.symbol,
     ORD_DVSN: "00",
     ORD_QTY: String(params.quantity),
-    OVRS_ORD_UNPR: params.price.toFixed(2),
+    OVRS_ORD_UNPR: orderPrice.toFixed(2),
     ORD_SVR_DVSN_CD: "0",
   };
 
@@ -95,11 +102,11 @@ async function placeOverseasOrder(
   const msg = res.data.msg1?.trim() ?? "";
 
   if (rtCd !== "0") {
-    console.error(`[ORDER FAIL] ${params.side} ${params.symbol} x ${params.quantity} @ $${params.price.toFixed(2)} — ${msg}`);
+    console.error(`[ORDER FAIL] ${params.side} ${params.symbol} x ${params.quantity} @ $${orderPrice.toFixed(2)} — ${msg}`);
     return;
   }
 
   console.log(
-    `[ORDER] ${params.side} ${params.symbol} x ${params.quantity} @ $${params.price.toFixed(2)} — ${msg}`,
+    `[ORDER] ${params.side} ${params.symbol} x ${params.quantity} @ $${orderPrice.toFixed(2)} — ${msg}`,
   );
 }

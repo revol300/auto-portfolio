@@ -26,7 +26,7 @@ export interface RankedStock {
 
 export interface RebalanceStrategy {
   readonly config: StrategyConfig;
-  buildUniverse(): Promise<UniverseStock[]>;
+  buildUniverse(totalAssets?: number): Promise<UniverseStock[]>;
   fetchScoringData(universe: UniverseStock[]): Promise<unknown>;
   rankStocks(data: unknown): RankedStock[];
   buildTargetPortfolio(

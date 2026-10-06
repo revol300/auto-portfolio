@@ -80,7 +80,7 @@ program
         return;
       }
 
-      const universe = await strategy.buildUniverse();
+      const universe = await strategy.buildUniverse(account.totalAssets);
       const scoringData = await strategy.fetchScoringData(universe);
       const ranked = strategy.rankStocks(scoringData);
 

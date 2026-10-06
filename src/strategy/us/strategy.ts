@@ -26,15 +26,18 @@ export class UsEvEbitdaStrategy implements RebalanceStrategy {
     this.client = client;
   }
 
-  async buildUniverse(): Promise<UniverseStock[]> {
-    const stocks = await buildUsUniverse();
+  async buildUniverse(totalAssets?: number): Promise<UniverseStock[]> {
+    if (!totalAssets || totalAssets <= 0) {
+      throw new Error("미국 주식 가격 상한을 계산할 총 자산이 필요합니다.");
+    }
+
+    const slotAmount = totalAssets * (1 - US_STRATEGY.cashRatio) / US_STRATEGY.portfolioSize;
+    const maxPrice = slotAmount / US_STRATEGY.buyPriceBuffer;
+    const stocks = await buildUsUniverse(maxPrice);
 
     for (const s of stocks) {
       this.exchangeMap.set(s.code, s.exchange);
     }
-    // IEF exchange 등록
-    this.exchangeMap.set(US_STRATEGY.iefSymbol, US_STRATEGY.iefExchange);
-
     return stocks;
   }
 
@@ -98,22 +101,10 @@ export class UsEvEbitdaStrategy implements RebalanceStrategy {
       targetQuantity: 0,
     }));
 
-    // 빈 슬롯은 IEF로 채움
     const emptySlots = portfolioSize - selected.length;
     if (emptySlots > 0) {
-      const iefWeight = emptySlots * perSlotWeight;
-      const iefAmount = emptySlots * perSlotAmount;
-      items.push({
-        code: US_STRATEGY.iefSymbol,
-        name: "iShares 7-10 Year Treasury Bond ETF",
-        rank: 0,
-        score: 0,
-        targetWeight: iefWeight,
-        targetAmount: iefAmount,
-        targetQuantity: 0,
-      });
       console.log(
-        `[Portfolio] 주식 ${selected.length}종목 (${(selected.length * perSlotWeight * 100).toFixed(0)}%) + IEF ${emptySlots}슬롯 (${(iefWeight * 100).toFixed(0)}%)`,
+        `[Portfolio] 주식 ${selected.length}종목 (${(selected.length * perSlotWeight * 100).toFixed(0)}%) + 현금 ${emptySlots}슬롯 (${(emptySlots * perSlotWeight * 100).toFixed(0)}%)`,
       );
     } else {
       console.log(`[Portfolio] 주식 ${selected.length}종목 (100%)`);

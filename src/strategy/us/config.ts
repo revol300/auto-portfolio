@@ -13,8 +13,7 @@ export const US_STRATEGY = {
   valueUniverseSize: 50,
   momentumMonths: 12,
 
-  iefSymbol: "IEF",
-  iefExchange: "NYS",
+  buyPriceBuffer: 1.05,
 
   minPrice: 5,
   minMarketCap: 500_000_000,

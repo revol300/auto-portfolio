@@ -58,7 +58,10 @@ export function createRebalancePlan(input: RebalanceInput): RebalancePlan {
     });
   }
 
-  const investmentAmount = account.totalAssets * (1 - config.cashRatio);
+  const investmentAmount = targetPortfolio.reduce(
+    (sum, target) => sum + target.targetAmount,
+    0,
+  );
 
   return {
     marketId: config.marketId,
@@ -66,7 +69,7 @@ export function createRebalancePlan(input: RebalanceInput): RebalancePlan {
     executedAt: new Date().toISOString(),
     totalAssets: account.totalAssets,
     investmentAmount,
-    cashTarget: account.totalAssets * config.cashRatio,
+    cashTarget: account.totalAssets - investmentAmount,
     actions,
   };
 }

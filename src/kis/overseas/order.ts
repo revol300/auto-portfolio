@@ -1,5 +1,6 @@
 import type { AxiosInstance } from "axios";
 import type { RebalanceAction } from "../../types.js";
+import { US_STRATEGY } from "../../strategy/us/config.js";
 
 export async function executeOverseasOrders(
   client: AxiosInstance,
@@ -70,7 +71,7 @@ async function placeOverseasOrder(
   const trId = params.side === "BUY" ? "TTTT1002U" : "TTTT1006U";
   const orderExchange = ORDER_EXCHANGE_MAP[params.exchange] ?? params.exchange;
   const orderPrice = Math.round(
-    params.price * (params.side === "BUY" ? 1.05 : 0.95) * 100,
+    params.price * (params.side === "BUY" ? US_STRATEGY.buyPriceBuffer : 0.95) * 100,
   ) / 100;
 
   const body: Record<string, string> = {

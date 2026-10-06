@@ -20,12 +20,21 @@ export function printReport(plan: RebalancePlan, priceMap: Map<string, number>):
   console.log("----------------------------------------");
 
   const isUs = plan.marketId === "us";
-  console.log(`\n  [종목]           [현재] [목표] [Action] [주문수량]${isUs ? " [주당단가]" : ""}`);
+  const nameWidth = 28;
+  const currentWidth = 6;
+  const targetWidth = 6;
+  const actionWidth = 8;
+  const quantityWidth = 10;
+  const priceWidth = 10;
+
+  console.log(
+    `\n  ${padDisplay("[종목]", nameWidth)} ${padDisplay("[현재]", currentWidth, "right")} ${padDisplay("[목표]", targetWidth, "right")} ${padDisplay("[Action]", actionWidth)} ${padDisplay("[주문수량]", quantityWidth, "right")}${isUs ? ` ${padDisplay("[주당단가]", priceWidth, "right")}` : ""}`,
+  );
   for (const a of plan.actions) {
     const qty = a.orderQuantity > 0 ? `+${a.orderQuantity}` : String(a.orderQuantity);
-    const unitPrice = isUs ? `  $${formatUnitPrice(priceMap.get(a.code))}` : "";
+    const unitPrice = isUs ? `$${formatUnitPrice(priceMap.get(a.code))}` : "";
     console.log(
-      `  ${a.name.padEnd(16)} ${String(a.currentQuantity).padStart(5)} ${String(a.targetQuantity).padStart(5)}  ${a.action.padEnd(5)}   ${qty.padStart(6)}${unitPrice}`,
+      `  ${padDisplay(a.name, nameWidth)} ${padDisplay(String(a.currentQuantity), currentWidth, "right")} ${padDisplay(String(a.targetQuantity), targetWidth, "right")} ${padDisplay(a.action, actionWidth)} ${padDisplay(qty, quantityWidth, "right")}${isUs ? ` ${padDisplay(unitPrice, priceWidth, "right")}` : ""}`,
     );
   }
   console.log("========================================\n");
@@ -66,7 +75,7 @@ export function saveReport(
   const tpHeader = "code,name,targetAmount";
   const tpRows = plan.actions
     .filter((a) => a.action !== "SELL" || a.targetQuantity > 0)
-    .map((a) => `${a.code},${a.name},${a.targetAmount}`);
+    .map((a) => [a.code, a.name, a.targetAmount].map(csvField).join(","));
   fs.writeFileSync(
     path.join(outputDir, "target-portfolio.csv"),
     [tpHeader, ...tpRows].join("\n"),
@@ -76,8 +85,14 @@ export function saveReport(
   const isUs = plan.marketId === "us";
   const rbHeader = `종목,현재,목표,Action,주문수량${isUs ? ",주당단가" : ""}`;
   const rbRows = plan.actions.map(
-    (a) =>
-      `${a.name},${a.currentQuantity},${a.targetQuantity},${a.action},${a.orderQuantity > 0 ? "+" : ""}${a.orderQuantity}${isUs ? `,${formatUnitPrice(priceMap.get(a.code))}` : ""}`,
+    (a) => [
+      a.name,
+      a.currentQuantity,
+      a.targetQuantity,
+      a.action,
+      `${a.orderQuantity > 0 ? "+" : ""}${a.orderQuantity}`,
+      ...(isUs ? [formatUnitPrice(priceMap.get(a.code))] : []),
+    ].map(csvField).join(","),
   );
   fs.writeFileSync(
     path.join(outputDir, "rebalance.csv"),
@@ -95,6 +110,49 @@ function formatUnitPrice(price: number | undefined): string {
   return typeof price === "number" && Number.isFinite(price) && price > 0
     ? price.toFixed(2)
     : "";
+}
+
+function csvField(value: unknown): string {
+  const text = String(value);
+  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function padDisplay(value: string, width: number, align: "left" | "right" = "left"): string {
+  const text = truncateDisplay(value, width);
+  const padding = " ".repeat(Math.max(0, width - displayWidth(text)));
+  return align === "right" ? padding + text : text + padding;
+}
+
+function truncateDisplay(value: string, width: number): string {
+  if (displayWidth(value) <= width) return value;
+  if (width <= 1) return "…";
+
+  let result = "";
+  let used = 0;
+  for (const char of value) {
+    const charWidth = displayWidth(char);
+    if (used + charWidth > width - 1) break;
+    result += char;
+    used += charWidth;
+  }
+  return `${result}…`;
+}
+
+function displayWidth(value: string): number {
+  return [...value].reduce((width, char) => width + (isWideCharacter(char) ? 2 : 1), 0);
+}
+
+function isWideCharacter(char: string): boolean {
+  const code = char.codePointAt(0) ?? 0;
+  return (
+    (code >= 0x1100 && code <= 0x115f) ||
+    (code >= 0x2e80 && code <= 0xa4cf) ||
+    (code >= 0xac00 && code <= 0xd7a3) ||
+    (code >= 0xf900 && code <= 0xfaff) ||
+    (code >= 0xfe10 && code <= 0xfe6f) ||
+    (code >= 0xff00 && code <= 0xff60) ||
+    (code >= 0xffe0 && code <= 0xffe6)
+  );
 }
 
 function r(n: number): string {

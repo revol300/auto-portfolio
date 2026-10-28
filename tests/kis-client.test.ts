@@ -5,14 +5,14 @@ import path from "node:path";
 import test from "node:test";
 import { createKisClient } from "../src/kis/client.js";
 
-test("concurrent KIS requests respect the virtual-account request interval", async () => {
+test("concurrent KIS requests respect the one-second production request interval", async () => {
   const cwd = process.cwd();
   const previousEnv = process.env.KIS_ENV;
   const directory = await mkdtemp(path.join(tmpdir(), "kis-rate-limit-"));
 
   try {
     process.chdir(directory);
-    process.env.KIS_ENV = "virtual";
+    process.env.KIS_ENV = "prod";
     await writeFile(".token-cache.json", JSON.stringify({
       access_token: "test-token",
       expires_at: Date.now() + 60_000,
@@ -29,7 +29,7 @@ test("concurrent KIS requests respect the virtual-account request interval", asy
 
     for (let i = 1; i < sentAt.length; i++) {
       const interval = sentAt[i] - sentAt[i - 1];
-      assert.ok(interval >= 1_080, `requests were only ${interval.toFixed(0)}ms apart`);
+      assert.ok(interval >= 980, `requests were only ${interval.toFixed(0)}ms apart`);
     }
   } finally {
     process.chdir(cwd);

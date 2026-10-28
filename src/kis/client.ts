@@ -12,7 +12,7 @@ export async function createKisClient(): Promise<AxiosInstance> {
   const token = await getAccessToken();
   const appKey = process.env.KIS_APP_KEY!;
   const appSecret = process.env.KIS_APP_SECRET!;
-  const minRequestInterval = process.env.KIS_ENV === "prod" ? 200 : 1_100;
+  const minRequestInterval = process.env.KIS_ENV === "prod" ? 1_000 : 1_100;
 
   const client = axios.create({
     baseURL: getBaseUrl(),

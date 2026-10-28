@@ -3,8 +3,8 @@ import { getAccessToken, getBaseUrl } from "./auth.js";
 
 let clientInstance: AxiosInstance | null = null;
 
-const MIN_REQUEST_INTERVAL = 200; // ms (5 req/sec, KIS 초당 10건 제한 대비 안전 마진)
 let lastRequestTime = 0;
+let requestQueue = Promise.resolve();
 
 export async function createKisClient(): Promise<AxiosInstance> {
   if (clientInstance) return clientInstance;
@@ -12,8 +12,9 @@ export async function createKisClient(): Promise<AxiosInstance> {
   const token = await getAccessToken();
   const appKey = process.env.KIS_APP_KEY!;
   const appSecret = process.env.KIS_APP_SECRET!;
+  const minRequestInterval = process.env.KIS_ENV === "prod" ? 200 : 1_100;
 
-  clientInstance = axios.create({
+  const client = axios.create({
     baseURL: getBaseUrl(),
     headers: {
       Authorization: `Bearer ${token}`,
@@ -23,28 +24,31 @@ export async function createKisClient(): Promise<AxiosInstance> {
     },
   });
 
-  // Rate limiter: 요청 간 최소 간격 보장
-  clientInstance.interceptors.request.use(async (config) => {
-    const now = Date.now();
-    const elapsed = now - lastRequestTime;
-    if (elapsed < MIN_REQUEST_INTERVAL) {
-      await new Promise((r) => setTimeout(r, MIN_REQUEST_INTERVAL - elapsed));
-    }
-    lastRequestTime = Date.now();
+  // 동시 요청도 큐에서 순서대로 대기하여 호출 간격을 보장한다.
+  client.interceptors.request.use(async (config) => {
+    requestQueue = requestQueue.then(async () => {
+      const elapsed = Date.now() - lastRequestTime;
+      if (elapsed < minRequestInterval) {
+        await new Promise((r) => setTimeout(r, minRequestInterval - elapsed));
+      }
+      lastRequestTime = Date.now();
+    });
+    await requestQueue;
     return config;
   });
 
-  clientInstance.interceptors.response.use(
+  client.interceptors.response.use(
     (res) => res,
     async (error) => {
       if (error.response?.status === 401) {
         const newToken = await getAccessToken();
         error.config.headers.Authorization = `Bearer ${newToken}`;
-        return axios.request(error.config);
+        return client.request(error.config);
       }
       throw error;
     },
   );
 
-  return clientInstance;
+  clientInstance = client;
+  return client;
 }

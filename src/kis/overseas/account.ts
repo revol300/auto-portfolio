@@ -38,6 +38,7 @@ export async function fetchOverseasAccountBalance(
     .map((item) => ({
       code: item.ovrs_pdno ?? "",
       name: item.ovrs_item_name ?? "",
+      exchange: item.ovrs_excg_cd?.trim(),
       quantity: Number(item.ovrs_cblc_qty ?? 0),
       currentPrice: Number(item.now_pric2 ?? 0),
       evaluationAmount: Number(item.ovrs_stck_evlu_amt ?? 0),

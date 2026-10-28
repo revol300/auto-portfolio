@@ -14,6 +14,7 @@ export interface PriceData {
 export interface Position {
   code: string;
   name: string;
+  exchange?: string;
   quantity: number;
   currentPrice: number;
   evaluationAmount: number;

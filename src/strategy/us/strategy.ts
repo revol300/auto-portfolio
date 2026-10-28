@@ -114,7 +114,13 @@ export class UsEvEbitdaStrategy implements RebalanceStrategy {
   }
 
   async fetchAccountBalance(): Promise<AccountBalance> {
-    return fetchOverseasAccountBalance(this.client);
+    const account = await fetchOverseasAccountBalance(this.client);
+    for (const position of account.positions) {
+      if (position.exchange) {
+        this.exchangeMap.set(position.code, position.exchange);
+      }
+    }
+    return account;
   }
 
   async fetchPrices(codes: string[]): Promise<PriceData[]> {
